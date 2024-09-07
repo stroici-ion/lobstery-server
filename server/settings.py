@@ -14,7 +14,12 @@ SECRET_KEY = 'django-insecure-54_z$60zmz(e=rnu-ow(47ajvmghkzfbf_%cwe(10+_&pv@=hk
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['13.61.4.166']
+ALLOWED_HOSTS = [
+    '13.61.4.166',
+    'your-ec2-public-ip',
+    'main.d30x8effksuz01.amplifyapp.com',  # React app's domain
+    'localhost'
+    ]
 
 
 # Application definition
@@ -159,3 +164,4 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media/')
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 CORS_ALLOWED_ORIGINS  = ['https://main.d30x8effksuz01.amplifyapp.com']
+CSRF_TRUSTED_ORIGINS  = ['https://main.d30x8effksuz01.amplifyapp.com']
