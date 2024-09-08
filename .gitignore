@@ -90,5 +90,3 @@ celerybeat-schedule
 
 # Rope project settings
 .ropeproject
-
-db.sqlite3
