@@ -14,7 +14,7 @@ SECRET_KEY = 'django-insecure-54_z$60zmz(e=rnu-ow(47ajvmghkzfbf_%cwe(10+_&pv@=hk
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['13.49.120.104']
+ALLOWED_HOSTS = ['stroici.pythonanywhere.com']
 
 
 # Application definition
@@ -149,10 +149,11 @@ USE_I18N = True
 USE_TZ = True
 
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
 
 MEDIA_URL = '/media/'
 
+STATIC_ROOT = os.path.join(BASE_DIR, 'static/')
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media/')
 
 
