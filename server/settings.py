@@ -15,7 +15,7 @@ SECRET_KEY = 'django-insecure-54_z$60zmz(e=rnu-ow(47ajvmghkzfbf_%cwe(10+_&pv@=hk
 DEBUG = True
 
 ALLOWED_HOSTS = [
-    '13.61.4.166',
+    '13.53.129.134',
     'your-ec2-public-ip',
     'main.d30x8effksuz01.amplifyapp.com',  # React app's domain
     'localhost'
