@@ -14,7 +14,7 @@ SECRET_KEY = 'django-insecure-54_z$60zmz(e=rnu-ow(47ajvmghkzfbf_%cwe(10+_&pv@=hk
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['stroici.pythonanywhere.com']
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
@@ -149,13 +149,29 @@ USE_I18N = True
 USE_TZ = True
 
 
-STATIC_URL = '/static/'
+STATIC_URL = 'static/'
+
 MEDIA_URL = '/media/'
-STATIC_ROOT = '/home/stroici/static'
-MEDIA_ROOT = '/home/stroici/media'
+
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media/')
 
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
-CORS_ALLOWED_ORIGINS = ['https://main.d30x8effksuz01.amplifyapp.com']
+CORS_ALLOWED_ORIGINS = ['https://main.du44a9x9lupkf.amplifyapp.com']
+
+CORS_ALLOW_METHODS = [
+    'GET',
+    'POST',
+    'PUT',
+    'DELETE',
+    'OPTIONS',
+]
+
+CORS_ALLOW_HEADERS = [
+    'authorization',
+    'content-type',
+    'x-csrftoken',
+    'x-requested-with',
+]
