@@ -31,12 +31,19 @@ class PostAuthorPermission(permissions.BasePermission):
 
 
 class PostListAPIView(generics.ListAPIView):
+    authentication_classes = []
+    permission_classes = [permissions.AllowAny]
     serializer_class = PostListSerilaizer
     queryset = Post.objects.all()
 
     def get_queryset(self):
         return super().get_queryset().order_by('-created_at')
-
+    
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        print(self.request.GET.get('user', ''))
+        context['user'] = self.request.GET.get('user', '')
+        return context
 
 class PostRetrieveAPIView(generics.RetrieveAPIView):
     serializer_class = PostListSerilaizer
@@ -84,8 +91,9 @@ class PostPinCommentAPIView(APIView):
 
 '''COMMENT'''
 
-
 class CommentListAPIView(generics.ListAPIView):
+    authentication_classes = []
+    permission_classes = [permissions.AllowAny]
     serializer_class = CommentListSerilaizer
     queryset = PostComment.objects.all()
 
@@ -106,6 +114,11 @@ class CommentListAPIView(generics.ListAPIView):
                 When(id=pinned_comment_id, then=Value(1)),
                 output_field=IntegerField(),
             )).order_by('-custom_order')
+        
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context['user'] = self.request.GET.get('user', -1)
+        return context
 
 
 class CommentCreateAPIView(generics.CreateAPIView):
@@ -227,11 +240,19 @@ class CommentLikeByAuthorAPIView(APIView):
 
 
 class ReplyListAPIView(generics.ListAPIView):
+    authentication_classes = []
+    permission_classes = [permissions.AllowAny]
     serializer_class = ReplyListSerilaizer
     queryset = PostComment.objects.all()
 
     def get_queryset(self):
         return super().get_queryset().filter(parent=self.kwargs.get('parent'))
+    
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        print(self.request.GET.get('user', ''))
+        context['user'] = self.request.GET.get('user', '')
+        return context
 
 
 '''Audience'''

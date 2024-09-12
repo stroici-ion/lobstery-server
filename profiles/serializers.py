@@ -4,7 +4,7 @@ from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
 from django.contrib.auth.hashers import make_password
 from profiles.models import UserProfile
-
+from rest_framework.validators import UniqueValidator
 
 class UserProfileInlineSerializer(serializers.ModelSerializer):
     avatar = serializers.ImageField(read_only=True)
@@ -70,10 +70,15 @@ class UserRegisterSerializer(serializers.ModelSerializer):
         write_only=True,
         required=True,
     )
+    
+    email = serializers.EmailField(
+        required=True,
+        validators=[UniqueValidator(queryset=User.objects.all(), message="This email is already taken.")]
+    )
 
     class Meta:
         model = User
-        fields = ('id', 'username', 'password')
+        fields = ('id', 'username', 'password', 'first_name', 'last_name', 'email')
 
     def create(self, validated_data):
         validated_data['password'] = make_password(

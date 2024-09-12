@@ -53,22 +53,26 @@ class CommentListSerilaizer(serializers.ModelSerializer):
         return count
 
     def get_liked(self, comment):
-        user = self.context.get('request').user
-        liked = CommentLike.objects.filter(
-            like=True, comment=comment, user=user).count() > 0
-        return liked
+        user = self.context.get('user')
+        if user:
+            liked = CommentLike.objects.filter(
+                like=True, comment=comment, user=user).exists()
+            return liked
+        return False
 
     def get_disliked(self, comment):
-        user = self.context.get('request').user
-        disliked = CommentLike.objects.filter(
-            like=False, comment=comment, user=user).count() > 0
-        return disliked
+        user = self.context.get('user')
+        if user:
+            disliked = CommentLike.objects.filter(
+                like=False, comment=comment, user=user).exists()
+            return disliked
+        return False
 
     def get_is_replied_by_author(self, comment):
         is_replied_by_author = PostComment.objects.filter(
-            parent=comment, user=comment.post.user).count() > 0
+            parent=comment, user=comment.post.user).exists()
         return is_replied_by_author
-
+    
     def get_is_pinned_by_author(self, comment):
         print(comment.post.pinned_comment, comment)
         return comment.post.pinned_comment == comment
@@ -158,17 +162,21 @@ class PostListSerilaizer(serializers.ModelSerializer):
         return count
 
     def get_liked(self, post):
-        user = self.context.get('request').user
-        liked = PostLike.objects.filter(
-            like=True, post=post, user=user).count() > 0
-        return liked
+        user = self.context.get('user')
+        if user:
+            liked = PostLike.objects.filter(
+                like=True, post=post, user=user).exists()
+            return liked
+        return False
 
     def get_disliked(self, post):
-        user = self.context.get('request').user
-        disliked = PostLike.objects.filter(
-            like=False, post=post, user=user).count() > 0
-        return disliked
-
+        user = self.context.get('user')
+        if user:
+            disliked = PostLike.objects.filter(
+                like=False, post=post, user=user).exists()
+            return disliked
+        return False
+    
 
 class PostCreateSerilaizer(TaggitSerializer, serializers.ModelSerializer):
     tags = TagListSerializerField(required=False)
@@ -322,16 +330,20 @@ class ReplyListSerilaizer(serializers.ModelSerializer):
         return count
 
     def get_liked(self, comment):
-        user = self.context.get('request').user
-        liked = CommentLike.objects.filter(
-            like=True, comment=comment, user=user).count() > 0
-        return liked
-
+        user = self.context.get('user')
+        if user:
+            liked = CommentLike.objects.filter(
+                like=True, comment=comment, user=user).exists()
+            return liked
+        return False
+        
     def get_disliked(self, comment):
-        user = self.context.get('request').user
-        disliked = CommentLike.objects.filter(
-            like=False, comment=comment, user=user).count() > 0
-        return disliked
+        user = self.context.get('user')
+        if user:
+            disliked = CommentLike.objects.filter(
+                like=False, comment=comment, user=user).exists()
+            return disliked
+        return False
 
 
 class AudienceCreateUpdateSerilaizer(serializers.ModelSerializer):
