@@ -159,8 +159,8 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media/')
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
-CORS_ALLOW_ALL_ORIGIN = True
 CORS_ALLOWED_ORIGINS = ['https://main.du44a9x9lupkf.amplifyapp.com']
+# CORS_ALLOW_ALL_ORIGIN = True
 # CORS_ALLOWED_ORIGINS = ['http://localhost:3000']
 
 CORS_ALLOW_METHODS = [
