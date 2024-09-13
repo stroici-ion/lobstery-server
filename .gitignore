@@ -32,6 +32,8 @@ var/
 .installed.cfg
 *.egg
 
+*.sqlite3
+
 # PyInstaller
 #  Usually these files are written by a python script from a template
 #  before PyInstaller builds the exe, so as to inject date/other infos into it.
@@ -90,5 +92,3 @@ celerybeat-schedule
 
 # Rope project settings
 .ropeproject
-
-db.sqlite3
