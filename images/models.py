@@ -37,28 +37,20 @@ class Image(models.Model):
 
     def save(self, **kwargs):
         if self.image:
-            output_size_long_horizontal = (9999, 400)
-            output_size_horizontal = (750, 9999)
-            output_size_square = (9999, 400)
-            output_size_vertical = (400, 9999)
+            output_size = (600, 999)
             output_thumb = BytesIO()
             img = ImageTool.open(self.image)
             img_name = self.image.name.split('.')[0]
             aspect_ratio = img.width / img.height
-            if aspect_ratio > 1.8:
-                img.thumbnail(output_size_long_horizontal,
-                              resample=ImageTool.LANCZOS)
-            if aspect_ratio > 1.2 and aspect_ratio <= 1.8:
-                img.thumbnail(output_size_horizontal,
-                              resample=ImageTool.LANCZOS)
-            if aspect_ratio <= 1.2 and aspect_ratio >= 0.8:
-                img.thumbnail(output_size_square, resample=ImageTool.LANCZOS)
-            if aspect_ratio < 0.8:
-                img.thumbnail(output_size_vertical, resample=ImageTool.LANCZOS)
-            img.save(output_thumb, format='PNG')
+    
+            if aspect_ratio < 1:
+                output_size = (9999, 600)
+                
+            img.thumbnail(output_size, resample=ImageTool.LANCZOS)
+            img.save(output_thumb, format='WEBP')
 
             self.image_thumbnail = InMemoryUploadedFile(
-                output_thumb, 'ImageField', f"{img_name}_thumb.jpg", 'image/jpeg', sys.getsizeof(output_thumb), None)
+                output_thumb, 'ImageField', f"{img_name}_thumb.webp", 'image/webp', sys.getsizeof(output_thumb), None)
 
         super(Image, self).save()
 
