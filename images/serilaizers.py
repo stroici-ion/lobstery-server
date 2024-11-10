@@ -51,6 +51,7 @@ class ImageCreateSerializer(serializers.ModelSerializer):
         model = Image
         fields = [
             'caption',
+            'order_id',
             'post',
             'image',
             'video',
@@ -87,7 +88,7 @@ class ImageUpdateSerializer(serializers.ModelSerializer):
         return super().update(instance, validated_data)
 
 
-class ImageListSerilaizer(serializers.ModelSerializer):
+class ImageListSerializer(serializers.ModelSerializer):
     user = UserPublicSerializer()
     tagged_friends = TaggedFriendsListSerializer(many=True)
 
@@ -95,6 +96,7 @@ class ImageListSerilaizer(serializers.ModelSerializer):
         model = Image
         fields = [
             'id',
+            'order_id',
             'caption',
             'image',
             'image_thumbnail',

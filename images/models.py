@@ -26,6 +26,7 @@ class Image(models.Model):
     thumbnail_width = models.IntegerField(default=0)
     thumbnail_height = models.IntegerField(default=0)
     video = models.FileField(upload_to='video', blank=True, null=True)
+    order_id = models.IntegerField(default=-1)
 
     @property
     def aspect_ratio(self):

@@ -41,13 +41,18 @@ class PostListAPIView(generics.ListAPIView):
     
     def get_serializer_context(self):
         context = super().get_serializer_context()
-        print(self.request.GET.get('user', ''))
         context['user'] = self.request.GET.get('user', '')
         return context
 
 class PostRetrieveAPIView(generics.RetrieveAPIView):
+    permission_classes = [permissions.AllowAny]
     serializer_class = PostListSerilaizer
     queryset = Post.objects.all()
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context['user'] = self.request.user.id
+        return context
 
 
 class PostCreateAPIView(generics.CreateAPIView):
@@ -109,7 +114,7 @@ class CommentListAPIView(generics.ListAPIView):
         if post.pinned_comment:
             pinned_comment_id = post.pinned_comment.id
 
-        return super().get_queryset().filter(post=post.id, parent=None).annotate(
+        return super().get_queryset().filter(post=post.id, comment=None).annotate(
             custom_order=Case(
                 When(id=pinned_comment_id, then=Value(1)),
                 output_field=IntegerField(),
@@ -230,7 +235,7 @@ class CommentLikeByAuthorAPIView(APIView):
             comment_candidate = None
 
         if comment_candidate:
-            comment_candidate.liked_by_author = not comment_candidate.liked_by_author
+            comment_candidate.is_liked_by_author = not comment_candidate.is_liked_by_author
             comment_candidate.save()
             return Response(CommentLikeByAuthorSerializer(comment_candidate).data, status=status.HTTP_200_OK)
         return Response(status=status.HTTP_400_BAD_REQUEST)
@@ -246,7 +251,7 @@ class ReplyListAPIView(generics.ListAPIView):
     queryset = PostComment.objects.all()
 
     def get_queryset(self):
-        return super().get_queryset().filter(parent=self.kwargs.get('parent'))
+        return super().get_queryset().filter(comment=self.kwargs.get('comment'))
     
     def get_serializer_context(self):
         context = super().get_serializer_context()

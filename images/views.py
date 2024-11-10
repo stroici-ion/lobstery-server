@@ -2,7 +2,7 @@ from rest_framework import generics, response, status, permissions
 import json
 
 from .models import Image, TaggedFriend
-from .serilaizers import ImageCreateSerializer, ImageListSerilaizer, ImageUpdateSerializer, TaggedFriendsListSerializer
+from .serilaizers import ImageCreateSerializer, ImageListSerializer, ImageUpdateSerializer, TaggedFriendsListSerializer
 
 class OwnerPermission(permissions.BasePermission):
     def has_object_permission(self, request, view, obj):
@@ -26,7 +26,7 @@ class ImageDestroyView(generics.DestroyAPIView):
     queryset = Image.objects.all()
 
 class ImageListView(generics.ListAPIView):
-    serializer_class = ImageListSerilaizer
+    serializer_class = ImageListSerializer
     queryset = Image.objects.all()
 
 class TaggedFriendsListAPIView(generics.ListCreateAPIView):

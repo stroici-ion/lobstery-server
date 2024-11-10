@@ -21,7 +21,7 @@ urlpatterns = [
          views.CommentLikeByAuthorAPIView.as_view()),
     path('comments/<int:pk>/likes/', views.CommentLikeAPIView.as_view()),
 
-    path('replies/<int:parent>/', views.ReplyListAPIView.as_view()),
+    path('replies/<int:comment>/', views.ReplyListAPIView.as_view()),
 
     path('audience/', views.AudienceCreateAPIView.as_view()),
     path('audience/<int:user>/list/', views.AudienceListAPIView.as_view()),

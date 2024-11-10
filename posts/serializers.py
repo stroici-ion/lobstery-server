@@ -3,7 +3,7 @@ from django.contrib.auth.models import User
 from taggit.serializers import (TagListSerializerField,
                                 TaggitSerializer)
 
-from images.serilaizers import ImageListSerilaizer
+from images.serilaizers import ImageListSerializer
 from profiles.serializers import UserPublicSerializer
 
 from .models import Audience, Post, PostComment, PostLike, CommentLike
@@ -32,7 +32,7 @@ class CommentListSerilaizer(serializers.ModelSerializer):
             'text',
             'user',
             'post',
-            'liked_by_author',
+            'is_liked_by_author',
             'created_at',
             'updated_at',
             'likes_count',
@@ -70,7 +70,7 @@ class CommentListSerilaizer(serializers.ModelSerializer):
 
     def get_is_replied_by_author(self, comment):
         is_replied_by_author = PostComment.objects.filter(
-            parent=comment, user=comment.post.user).exists()
+            comment=comment, user=comment.post.user).exists()
         return is_replied_by_author
     
     def get_is_pinned_by_author(self, comment):
@@ -84,9 +84,9 @@ class CommentCreateSerilaizer(serializers.ModelSerializer):
     post = serializers.PrimaryKeyRelatedField(
         queryset=Post.objects.all(), many=False)
 
-    parent = serializers.PrimaryKeyRelatedField(
+    comment = serializers.PrimaryKeyRelatedField(
         queryset=PostComment.objects.all(), many=False, required=False)
-    reply_to = serializers.PrimaryKeyRelatedField(
+    mentioned_user = serializers.PrimaryKeyRelatedField(
         queryset=User.objects.all(), many=False, required=False)
 
     class Meta:
@@ -96,8 +96,8 @@ class CommentCreateSerilaizer(serializers.ModelSerializer):
             'text',
             'user',
             'post',
-            'parent',
-            'reply_to',
+            'comment',
+            'mentioned_user',
             'created_at',
             'updated_at'
         ]
@@ -116,7 +116,7 @@ class PostPinnedCommentSerilaizer(serializers.ModelSerializer):
 class PostListSerilaizer(serializers.ModelSerializer):
     title = serializers.CharField(required=False)
     text = serializers.CharField(required=False)
-    image_set = ImageListSerilaizer(many=True, read_only=True)
+    image_set = ImageListSerializer(many=True, read_only=True)
     user = UserPublicSerializer(many=False, read_only=True)
     tagged_friends = UserPublicSerializer(many=True, read_only=True)
     tags = TagListSerializerField()
@@ -149,7 +149,8 @@ class PostListSerilaizer(serializers.ModelSerializer):
             'liked',
             'disliked',
             'audience',
-            'custom_audience'
+            'custom_audience',
+            'images_layout'
 
         ]
 
@@ -191,6 +192,7 @@ class PostCreateSerilaizer(TaggitSerializer, serializers.ModelSerializer):
             'feeling',
             'tags',
             'tagged_friends',
+            'images_layout'
         ]
 
     def create(self, validated_data):
@@ -289,7 +291,7 @@ class CommentLikeByAuthorSerializer(serializers.ModelSerializer):
     class Meta:
         model = PostComment
         fields = [
-            'liked_by_author',
+            'is_liked_by_author',
         ]
 
 # REPLIES
@@ -310,9 +312,9 @@ class ReplyListSerilaizer(serializers.ModelSerializer):
             'text',
             'user',
             'post',
-            'parent',
+            'comment',
             'reply_to',
-            'liked_by_author',
+            'is_liked_by_author',
             'created_at',
             'updated_at',
             'likes_count',

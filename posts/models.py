@@ -32,17 +32,18 @@ class Post(models.Model):
     audience = models.IntegerField(default=1)
     custom_audience = models.ForeignKey(
         Audience, null=True, blank=True, on_delete=models.SET_NULL)
+    images_layout = models.JSONField(default=dict, blank=True, null=True)
 
 
 class PostComment(models.Model):
     text = models.TextField(default='')
     user = models.ForeignKey(User, null=True, on_delete=models.CASCADE)
     post = models.ForeignKey(Post, on_delete=models.CASCADE)
-    parent = models.ForeignKey(
+    comment = models.ForeignKey(
         'self', blank=True, null=True, on_delete=models.CASCADE)
-    reply_to = models.ForeignKey(
+    mentioned_user = models.ForeignKey(
         User, null=True, default=None, on_delete=models.SET_NULL, related_name='reply_reply')
-    liked_by_author = models.BooleanField(default=False)
+    is_liked_by_author = models.BooleanField(default=False)
     created_at = models.DateTimeField(
         auto_now_add=True, editable=False, null=False, blank=False)
     updated_at = models.DateTimeField(
