@@ -10,7 +10,7 @@ class Audience(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     # 0-private list will be black, 1-public, 2-friends, 3-friends and friends of friends
     audience = models.IntegerField(default=1)
-    audience_list = models.ManyToManyField(User, related_name='audience_list')
+    users = models.ManyToManyField(User, related_name='audience_users')
 
 
 class Post(models.Model):

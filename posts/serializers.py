@@ -79,8 +79,6 @@ class CommentListSerilaizer(serializers.ModelSerializer):
 
 
 class CommentCreateSerilaizer(serializers.ModelSerializer):
-    user = serializers.PrimaryKeyRelatedField(
-        queryset=User.objects.all(), many=False)
     post = serializers.PrimaryKeyRelatedField(
         queryset=Post.objects.all(), many=False)
 
@@ -101,6 +99,14 @@ class CommentCreateSerilaizer(serializers.ModelSerializer):
             'created_at',
             'updated_at'
         ]
+        
+    def create(self, validated_data):
+        user_id = self.context['request'].user.id
+        if user_id:
+            validated_data['user_id'] = user_id
+            return super().create(validated_data)
+        
+# LIKES
 
 # POSTS
 
@@ -299,7 +305,7 @@ class CommentLikeByAuthorSerializer(serializers.ModelSerializer):
 
 class ReplyListSerilaizer(serializers.ModelSerializer):
     user = UserPublicSerializer()
-    reply_to = UserPublicSerializer()
+    mentioned_user = UserPublicSerializer()
     likes_count = serializers.SerializerMethodField()
     dislikes_count = serializers.SerializerMethodField()
     liked = serializers.SerializerMethodField()
@@ -313,7 +319,7 @@ class ReplyListSerilaizer(serializers.ModelSerializer):
             'user',
             'post',
             'comment',
-            'reply_to',
+            'mentioned_user',
             'is_liked_by_author',
             'created_at',
             'updated_at',
@@ -348,11 +354,9 @@ class ReplyListSerilaizer(serializers.ModelSerializer):
         return False
 
 
-class AudienceCreateUpdateSerilaizer(serializers.ModelSerializer):
-    audience = serializers.IntegerField()
-    users_list = UserPublicSerializer(
-        source='audience_list', many=True, read_only=True)
-    audience_list = serializers.PrimaryKeyRelatedField(
+
+class AudienceCreateSerializer(serializers.ModelSerializer):
+    users = serializers.PrimaryKeyRelatedField(
         queryset=User.objects.all(), many=True, write_only=True)
 
     class Meta:
@@ -360,9 +364,8 @@ class AudienceCreateUpdateSerilaizer(serializers.ModelSerializer):
         fields = [
             'id',
             'title',
-            'audience',
-            'audience_list',
-            'users_list'
+            'audience', 
+            'users',
         ]
 
     def create(self, validated_data):
@@ -373,7 +376,7 @@ class AudienceCreateUpdateSerilaizer(serializers.ModelSerializer):
 
 
 class AudienceListSerilaizer(serializers.ModelSerializer):
-    audience_list = UserPublicSerializer(many=True, read_only=True)
+    users = UserPublicSerializer(many=True, read_only=True)
 
     class Meta:
         model = Audience
@@ -381,12 +384,12 @@ class AudienceListSerilaizer(serializers.ModelSerializer):
             'id',
             'title',
             'audience',
-            'audience_list'
+            'users'
         ]
 
 
 class AudienceRetrieveDestroySerilaizer(serializers.ModelSerializer):
-    audience_list = UserPublicSerializer(many=True, read_only=True)
+    users = UserPublicSerializer(many=True, read_only=True)
 
     class Meta:
         model = Audience
@@ -395,5 +398,5 @@ class AudienceRetrieveDestroySerilaizer(serializers.ModelSerializer):
             'title',
             'user',
             'audience',
-            'audience_list'
+            'users',
         ]

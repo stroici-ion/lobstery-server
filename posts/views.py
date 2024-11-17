@@ -5,12 +5,14 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework import status
 
+from profiles.models import UserProfile
+from profiles.serializers import UserProfileAudienceSerializer
 from .models import Post, PostComment, PostLike, CommentLike, Audience
-from .serializers import PostListSerilaizer, PostCreateSerilaizer, PostLikesInfoSerilaizer
+from .serializers import AudienceCreateSerializer, PostListSerilaizer, PostCreateSerilaizer, PostLikesInfoSerilaizer
 from .serializers import CommentCreateSerilaizer, CommentListSerilaizer, PostLikeSerilaizer
 from .serializers import ReplyListSerilaizer, CommentLikeByAuthorSerializer
 from .serializers import CommentLikesInfoSerilaizer, CommentLikeSerilaizer, PostPinnedCommentSerilaizer
-from .serializers import AudienceCreateUpdateSerilaizer, AudienceListSerilaizer, AudienceRetrieveDestroySerilaizer
+from .serializers import AudienceListSerilaizer, AudienceRetrieveDestroySerilaizer
 
 
 class OwnerPermission(permissions.BasePermission):
@@ -129,6 +131,18 @@ class CommentListAPIView(generics.ListAPIView):
 class CommentCreateAPIView(generics.CreateAPIView):
     serializer_class = CommentCreateSerilaizer
     queryset = PostComment.objects.all()
+    
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context['user'] = self.request.user.id
+        return context
+    
+    def post(self, request, *args, **kwargs):
+        create_serializer = CommentCreateSerilaizer(data=request.data, context={'request': request})
+        create_serializer.is_valid(raise_exception=True)
+        comment = create_serializer.save()
+        list_serializer = CommentListSerilaizer(comment, context={'request': request, 'user': request.user})
+        return Response(list_serializer.data, status=status.HTTP_201_CREATED)
 
 
 class CommentDestroyAPIView(generics.DestroyAPIView):
@@ -255,7 +269,6 @@ class ReplyListAPIView(generics.ListAPIView):
     
     def get_serializer_context(self):
         context = super().get_serializer_context()
-        print(self.request.GET.get('user', ''))
         context['user'] = self.request.GET.get('user', '')
         return context
 
@@ -264,24 +277,47 @@ class ReplyListAPIView(generics.ListAPIView):
 
 
 class AudienceCreateAPIView(generics.CreateAPIView):
-    serializer_class = AudienceCreateUpdateSerilaizer
+    serializer_class = AudienceCreateSerializer
     queryset = Audience.objects.all()
 
 
 class AudienceUpdateAPIView(generics.UpdateAPIView):
     permission_classes = [OwnerPermission]
-    serializer_class = AudienceCreateUpdateSerilaizer
+    serializer_class = AudienceCreateSerializer
     queryset = Audience.objects.all()
 
 
 class AudienceListAPIView(generics.ListAPIView):
     permission_classes = [OwnerPermission]
     serializer_class = AudienceListSerilaizer
-    queryset = Audience.objects.all()
-    lookup_field = "user"
-
+  
+    def get_queryset(self):
+        user_id = self.kwargs.get('user')
+        print(user_id)
+        return Audience.objects.filter(user_id=user_id)
+        
 
 class AudienceRetrieveDestroyAPIView(generics.RetrieveDestroyAPIView):
     permission_classes = [OwnerPermission]
-    serializer_class = AudienceRetrieveDestroySerilaizer
-    queryset = Audience.objects.all()
+    
+    def delete(self, request, pk, *args, **kwargs):
+        profile = UserProfile.objects.get(user=self.request.user.id)
+        audience = Audience.objects.get(id=pk)
+        audience.delete()
+        
+        if profile.default_audience == 4:
+            custom_audience_candidate = Audience.objects.filter(user=self.request.user.id).first()
+            
+            if custom_audience_candidate:
+                profile.default_custom_audience = custom_audience_candidate
+                profile.save()
+                serialized_data = UserProfileAudienceSerializer(profile)
+                return Response(serialized_data.data, status=status.HTTP_200_OK)
+            else:
+                profile.default_audience = 1
+                profile.default_custom_audience = None
+                profile.save()
+                serialized_data = UserProfileAudienceSerializer(profile)
+                return Response(serialized_data.data, status=status.HTTP_200_OK)
+            
+        return Response(status=status.HTTP_200_OK)

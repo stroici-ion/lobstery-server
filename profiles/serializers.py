@@ -18,7 +18,21 @@ class UserProfileInlineSerializer(serializers.ModelSerializer):
             'avatar_thumbnail',
             'cover',
         ]
-
+        
+    # def get_avatar(self, obj):
+    #     request = self.context.get('request')
+    #     if obj.avatar and request:
+    #         # Build the full URL using request.build_absolute_uri
+    #         return request.build_absolute_uri(obj.avatar)
+    #     return None
+    
+    # def get_avatar_thumbnail(self, obj):
+    #     request = self.context.get('request')
+    #     if obj.avatar and request:
+    #         # Build the full URL using request.build_absolute_uri
+    #         return request.build_absolute_uri(obj.avatar_thumbnail)
+    #     return None
+    
 
 class UserPublicSerializer(serializers.ModelSerializer):
     profile = UserProfileInlineSerializer(source='userprofile')
@@ -103,7 +117,6 @@ class UserProfileSerializer(serializers.ModelSerializer):
             'cover',
         ]
 
-
 class UserProfileFriendsInlineSerializer(serializers.ModelSerializer):
     user = UserPublicSerializer(
         many=False, read_only=True)
@@ -124,6 +137,7 @@ class UserProfileFriendsSerializer(serializers.ModelSerializer):
             'friends',
         ]
 
+    
 class UserProfileAudienceSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserProfile
