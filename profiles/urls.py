@@ -13,7 +13,8 @@ urlpatterns = [
     path('token/verify/', TokenVerifyView.as_view(), name='token_verify'),
     
     path('register/', views.UserCreateView.as_view()),
-    path('profiles/<int:pk>/', views.UserRetrieveView.as_view()),
+    path('profiles/<int:user_id>/', views.MyUserProfileRetrieveView.as_view()),
+    path('profiles/user/<int:user_id>/', views.UserProfileRetrieveView.as_view()),
     path('profiles/friends/<int:user>/', views.FriendsListView.as_view()),
     path('profiles/<int:user>/audience/', views.AudienceUpdateRetrieveAPIView.as_view()),
 ]

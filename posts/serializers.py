@@ -20,7 +20,7 @@ class CommentListSerilaizer(serializers.ModelSerializer):
     disliked = serializers.SerializerMethodField()
     is_replied_by_author = serializers.SerializerMethodField()
     replies_count = serializers.IntegerField(
-        source='postcomment_set.count',
+        source='replies.count',
         read_only=True,
     )
     is_pinned_by_author = serializers.SerializerMethodField()
@@ -74,7 +74,6 @@ class CommentListSerilaizer(serializers.ModelSerializer):
         return is_replied_by_author
     
     def get_is_pinned_by_author(self, comment):
-        print(comment.post.pinned_comment, comment)
         return comment.post.pinned_comment == comment
 
 
@@ -105,10 +104,6 @@ class CommentCreateSerilaizer(serializers.ModelSerializer):
         if user_id:
             validated_data['user_id'] = user_id
             return super().create(validated_data)
-        
-# LIKES
-
-# POSTS
 
 
 class PostPinnedCommentSerilaizer(serializers.ModelSerializer):
@@ -119,28 +114,28 @@ class PostPinnedCommentSerilaizer(serializers.ModelSerializer):
         ]
 
 
-class PostListSerilaizer(serializers.ModelSerializer):
+class PostListSerializer(serializers.ModelSerializer):
     title = serializers.CharField(required=False)
     text = serializers.CharField(required=False)
     image_set = ImageListSerializer(many=True, read_only=True)
     user = UserPublicSerializer(many=False, read_only=True)
     tagged_friends = UserPublicSerializer(many=True, read_only=True)
     tags = TagListSerializerField()
-    comments_count = serializers.IntegerField(
-        source='postcomment_set.count',
-        read_only=True,
-    )
-    likes_count = serializers.SerializerMethodField()
-    dislikes_count = serializers.SerializerMethodField()
+    comments_count = serializers.IntegerField(read_only=True)  # Annotated
+    likes_count = serializers.IntegerField(read_only=True)  # Annotated
+    dislikes_count = serializers.IntegerField(read_only=True)  # Annotated
+    favorite = serializers.BooleanField() # Annotated
     liked = serializers.SerializerMethodField()
     disliked = serializers.SerializerMethodField()
-    # pinned_comment = CommentListSerilaizer(many=False)
+    audience = serializers.SerializerMethodField()
+    custom_audience = serializers.SerializerMethodField()
 
     class Meta:
         model = Post
         fields = [
             'id',
             'title',
+            'images_count',
             'text',
             'feeling',
             'image_set',
@@ -156,37 +151,42 @@ class PostListSerilaizer(serializers.ModelSerializer):
             'disliked',
             'audience',
             'custom_audience',
-            'images_layout'
-
+            'images_layout',
+            'favorite'
         ]
 
-    def get_likes_count(self, post):
-        count = PostLike.objects.filter(like=True, post=post).count()
-        return count
-
-    def get_dislikes_count(self, post):
-        count = PostLike.objects.filter(like=False, post=post).count()
-        return count
-
     def get_liked(self, post):
-        user = self.context.get('user')
-        if user:
-            liked = PostLike.objects.filter(
-                like=True, post=post, user=user).exists()
-            return liked
+        user_id = self.context.get('user')
+        if user_id:
+            return PostLike.objects.filter(like=True, post=post, user_id=user_id).exists()
         return False
 
     def get_disliked(self, post):
-        user = self.context.get('user')
-        if user:
-            disliked = PostLike.objects.filter(
-                like=False, post=post, user=user).exists()
-            return disliked
+        user_id = self.context.get('user')
+        if user_id:
+            return PostLike.objects.filter(like=False, post=post, user_id=user_id).exists()
         return False
+
+    def get_audience(self, post):
+        user_id = self.context.get('user')
+        if user_id and int(user_id) == post.user.id:
+            return post.audience
+        return None
+
+    def get_custom_audience(self, post):
+        user_id = self.context.get('user')
+        if user_id and int(user_id) == post.user.id and post.audience == 4:
+            return post.custom_audience.id if post.custom_audience else None
+        return None
     
 
-class PostCreateSerilaizer(TaggitSerializer, serializers.ModelSerializer):
+class PostCreateSerializer(TaggitSerializer, serializers.ModelSerializer):
     tags = TagListSerializerField(required=False)
+    custom_audience = serializers.PrimaryKeyRelatedField(
+        queryset=Audience.objects.all(),
+        required=False,
+        allow_null=True
+    )
 
     class Meta:
         model = Post
@@ -194,6 +194,7 @@ class PostCreateSerilaizer(TaggitSerializer, serializers.ModelSerializer):
             'id',
             'title',
             'audience',
+            'custom_audience',
             'text',
             'feeling',
             'tags',
@@ -201,11 +202,36 @@ class PostCreateSerilaizer(TaggitSerializer, serializers.ModelSerializer):
             'images_layout'
         ]
 
+    def validate(self, attrs):
+        audience = attrs.get('audience')
+        custom_audience = attrs.get('custom_audience')
+
+        # Enforce custom_audience only for audience = 4
+        if audience == 4:
+            if not custom_audience:
+                raise serializers.ValidationError({
+                    'custom_audience': 'This field is required when audience is set to 4.'
+                })
+        else:
+            # Remove custom_audience if audience is not 4
+            attrs.pop('custom_audience', None)
+
+        return attrs
+
     def create(self, validated_data):
+        # Remove custom_audience if audience is not 4
+        if validated_data.get('audience') != 4:
+            validated_data.pop('custom_audience', None)
         user_id = self.context['request'].user.id
-        if user_id:
-            validated_data['user_id'] = user_id
-            return super().create(validated_data)
+        validated_data['user_id'] = user_id
+        return super().create(validated_data)
+
+    def update(self, instance, validated_data):
+        # Remove custom_audience if audience is not 4
+        if validated_data.get('audience') != 4:
+            validated_data.pop('custom_audience', None)
+        return super().update(instance, validated_data)
+    
 # LIKES
 
 
@@ -356,9 +382,13 @@ class ReplyListSerilaizer(serializers.ModelSerializer):
 
 
 class AudienceCreateSerializer(serializers.ModelSerializer):
-    users = serializers.PrimaryKeyRelatedField(
-        queryset=User.objects.all(), many=True, write_only=True)
-
+    users = UserPublicSerializer(many=True, read_only=True)
+    user_ids = serializers.PrimaryKeyRelatedField(
+        many=True,
+        queryset=User.objects.all(),
+        write_only=True
+        )
+    
     class Meta:
         model = Audience
         fields = [
@@ -366,17 +396,28 @@ class AudienceCreateSerializer(serializers.ModelSerializer):
             'title',
             'audience', 
             'users',
+            'user_ids'
         ]
 
     def create(self, validated_data):
-        user_id = self.context['request'].user.id
+        user_id = self.context['request'].user.id    
         if user_id:
-            validated_data['user_id'] = user_id
-            return super().create(validated_data)
+            users = validated_data.pop('user_ids', [])
+            audience = super().create(validated_data)
+            audience.users.set(users)
+            return audience
+        
+    def update(self, instance, validated_data):
+        user_id = self.context['request'].user.id    
+        if user_id:
+            users = validated_data.pop('user_ids', None)
+            instance = super().update(instance, validated_data)
+            if users is not None:
+                instance.users.set(users)
+            return instance
 
 
 class AudienceListSerilaizer(serializers.ModelSerializer):
-    users = UserPublicSerializer(many=True, read_only=True)
 
     class Meta:
         model = Audience
@@ -384,19 +425,27 @@ class AudienceListSerilaizer(serializers.ModelSerializer):
             'id',
             'title',
             'audience',
-            'users'
         ]
 
 
-class AudienceRetrieveDestroySerilaizer(serializers.ModelSerializer):
-    users = UserPublicSerializer(many=True, read_only=True)
+# class AudienceRetrieveDestroySerilaizer(serializers.ModelSerializer):
+#     users = UserPublicSerializer(many=True, read_only=True)
 
-    class Meta:
-        model = Audience
-        fields = [
-            'id',
-            'title',
-            'user',
-            'audience',
-            'users',
-        ]
+#     class Meta:
+#         model = Audience
+#         fields = [
+#             'id',
+#             'title',
+#             'user',
+#             'audience',
+#             'users',
+#         ]
+
+
+class FavoritePostSerializer(serializers.Serializer):
+    post_id = serializers.IntegerField()
+
+    def validate_post_id(self, value):
+        if not Post.objects.filter(id=value).exists():
+            raise serializers.ValidationError("Post with this ID does not exist.")
+        return value

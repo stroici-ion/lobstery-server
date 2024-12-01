@@ -104,7 +104,7 @@ REST_FRAMEWORK = {
         "rest_framework.permissions.IsAuthenticatedOrReadOnly",
     ],
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.LimitOffsetPagination',
-    "PAGE_SIZE": 20
+    "PAGE_SIZE": 10
 }
  
 
@@ -153,11 +153,17 @@ STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
 MEDIA_URL = '/media/'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media/')
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
+# Allow all origins (for testing purposes)
 CORS_ALLOW_ALL_ORIGINS = True
 
+# CSRF_TRUSTED_ORIGINS = [
+#     'http://127.0.0.1',
+#     'http://localhost',
+#     'http://192.168.100.34:8000',
+# ]

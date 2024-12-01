@@ -22,7 +22,7 @@ class Post(models.Model):
                              blank=True, max_length=100)
     text = models.TextField(default='', null=True, blank=True,)
     feeling = models.CharField(null=True, blank=True, max_length=10)
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='posts')
     tags = TaggableManager()
     pinned_comment = models.ForeignKey(
         'PostComment', null=True, default=None, blank=True, on_delete=models.SET_NULL, related_name='post_pinned')
@@ -33,14 +33,18 @@ class Post(models.Model):
     custom_audience = models.ForeignKey(
         Audience, null=True, blank=True, on_delete=models.SET_NULL)
     images_layout = models.JSONField(default=dict, blank=True, null=True)
+    
+    @property
+    def images_count(self):
+        return self.image_set.count()
 
 
 class PostComment(models.Model):
     text = models.TextField(default='')
     user = models.ForeignKey(User, null=True, on_delete=models.CASCADE)
-    post = models.ForeignKey(Post, on_delete=models.CASCADE)
+    post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='comments')
     comment = models.ForeignKey(
-        'self', blank=True, null=True, on_delete=models.CASCADE)
+        'self', blank=True, null=True, on_delete=models.CASCADE, related_name='replies')
     mentioned_user = models.ForeignKey(
         User, null=True, default=None, on_delete=models.SET_NULL, related_name='reply_reply')
     is_liked_by_author = models.BooleanField(default=False)
@@ -61,7 +65,7 @@ class PostLike(models.Model):
 
 class CommentLike(models.Model):
     like = models.BooleanField()
-    comment = models.ForeignKey(PostComment, on_delete=models.CASCADE)
+    comment = models.ForeignKey(PostComment, on_delete=models.CASCADE,  related_name='commentlike')
     user = models.ForeignKey(User, null=True, on_delete=models.SET_NULL)
 
     class Meta:

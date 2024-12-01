@@ -2,7 +2,7 @@ from io import BytesIO
 from PIL import Image
 from django.db import models
 from django.conf import settings
-from posts.models import Audience
+from posts.models import Audience, Post
 
 from django.core.files.uploadedfile import InMemoryUploadedFile
 import sys
@@ -19,10 +19,11 @@ class UserProfile(models.Model):
         upload_to='covers', blank=True, null=True, max_length=255)
     avatar_thumbnail = models.ImageField(
         upload_to='avatars_tumbnails', blank=True, null=True, max_length=255)
-    friends = models.ManyToManyField("self",  blank=True)
+    friends = models.ManyToManyField('self',  blank=True)
     default_audience = models.IntegerField(default=1)
     default_custom_audience = models.ForeignKey(Audience, null=True, blank=True, on_delete=models.SET_NULL)
-
+    favorite_posts = models.ManyToManyField(Post, blank=True, related_name='favorited_by')
+  
     def save(self, **kwargs):
         if (self.avatar):
             output_size = (100, 100)

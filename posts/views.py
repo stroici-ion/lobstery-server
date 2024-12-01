@@ -1,4 +1,4 @@
-from django.db.models import Case, When, Value, IntegerField
+from django.db.models import Case, When, Value, IntegerField, Count, Q, F, BooleanField, Exists, OuterRef
 from rest_framework.mixins import UpdateModelMixin
 from rest_framework import generics, permissions
 from rest_framework.response import Response
@@ -8,11 +8,11 @@ from rest_framework import status
 from profiles.models import UserProfile
 from profiles.serializers import UserProfileAudienceSerializer
 from .models import Post, PostComment, PostLike, CommentLike, Audience
-from .serializers import AudienceCreateSerializer, PostListSerilaizer, PostCreateSerilaizer, PostLikesInfoSerilaizer
+from .serializers import AudienceCreateSerializer, PostListSerializer, PostCreateSerializer, PostLikesInfoSerilaizer
 from .serializers import CommentCreateSerilaizer, CommentListSerilaizer, PostLikeSerilaizer
 from .serializers import ReplyListSerilaizer, CommentLikeByAuthorSerializer
 from .serializers import CommentLikesInfoSerilaizer, CommentLikeSerilaizer, PostPinnedCommentSerilaizer
-from .serializers import AudienceListSerilaizer, AudienceRetrieveDestroySerilaizer
+from .serializers import AudienceListSerilaizer, FavoritePostSerializer
 
 
 class OwnerPermission(permissions.BasePermission):
@@ -32,15 +32,60 @@ class PostAuthorPermission(permissions.BasePermission):
 '''POST'''
 
 
+# class ProfilePostsListAPIView(generics.ListAPIView):
+#     authentication_classes = []
+#     permission_classes = [permissions.AllowAny]
+#     serializer_class = PostListSerializer
+#     queryset = Post.objects.all()
+    
+#     def get_queryset(self):
+#         user = self.kwargs.get('user')  # Get 'user_id' from the URL
+#         return Post.objects.filter(user_id=user)  # Filter posts by 'user_id'
+    
+#     def get_serializer_context(self):
+#         context = super().get_serializer_context()
+#         context['user'] = self.request.GET.get('user', '')
+#         return context
+    
 class PostListAPIView(generics.ListAPIView):
     authentication_classes = []
     permission_classes = [permissions.AllowAny]
-    serializer_class = PostListSerilaizer
+    serializer_class = PostListSerializer
     queryset = Post.objects.all()
 
     def get_queryset(self):
-        return super().get_queryset().order_by('-created_at')
-    
+        user_id = self.request.GET.get('user')
+        filter_by = self.request.GET.get('filterBy')
+
+        # Ensure user is passed
+        if not user_id:
+            return Post.objects.none()
+
+        # Annotate favorite status
+        queryset = super().get_queryset().annotate(
+            favorite=Exists(
+                UserProfile.objects.filter(
+                    user_id=user_id,
+                    favorite_posts=OuterRef('pk')  # Check if the post exists in favorite_posts
+                )
+            ),
+            likes_count=Count('postlike', filter=Q(postlike__like=True), distinct=True),
+            dislikes_count=Count('postlike', filter=Q(postlike__like=False), distinct=True),
+            comments_count=Count('comments', filter=Q(comments__comment=None), distinct=True)
+        )
+
+        # Apply filters
+        if filter_by == 'all':
+            queryset = queryset.filter(Q(user_id=user_id) | Q(tagged_friends=user_id)).distinct()
+        elif filter_by == 'my':
+            queryset = queryset.filter(user_id=user_id)
+        elif filter_by == 'favorites': 
+            queryset = queryset.filter(favorite=True)
+        elif filter_by == 'liked':  
+            queryset = queryset.filter(postlike__user_id=user_id, postlike__like=True).distinct()
+
+        return queryset
+
     def get_serializer_context(self):
         context = super().get_serializer_context()
         context['user'] = self.request.GET.get('user', '')
@@ -48,8 +93,23 @@ class PostListAPIView(generics.ListAPIView):
 
 class PostRetrieveAPIView(generics.RetrieveAPIView):
     permission_classes = [permissions.AllowAny]
-    serializer_class = PostListSerilaizer
+    serializer_class = PostListSerializer
     queryset = Post.objects.all()
+    
+    def get_queryset(self):
+        # Annotate the queryset
+        queryset = super().get_queryset().annotate(
+            comments_count=Count('comments', filter=Q(comments__comment=None)),
+            likes_count=Count('postlike', filter=Q(postlike__like=True)),
+            dislikes_count=Count('postlike', filter=Q(postlike__like=False)),
+            favorite=Case(
+                When(user__userprofile__favorite_posts__id__exact=F('id'), then=True),
+                default=False,
+                output_field=BooleanField()
+            )
+        )
+
+        return queryset
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
@@ -58,20 +118,20 @@ class PostRetrieveAPIView(generics.RetrieveAPIView):
 
 
 class PostCreateAPIView(generics.CreateAPIView):
-    serializer_class = PostCreateSerilaizer
+    serializer_class = PostCreateSerializer
     queryset = Post.objects.all()
 
 
 class PostUpdateAPIView(generics.UpdateAPIView):
     permission_classes = [OwnerPermission]
-    serializer_class = PostCreateSerilaizer
+    serializer_class = PostCreateSerializer
     queryset = Post.objects.all()
 
 
 class PostDestroyAPIView(generics.DestroyAPIView):
     permission_classes = [OwnerPermission]
     queryset = Post.objects.all()
-    serializer_class = PostCreateSerilaizer
+    serializer_class = PostCreateSerializer
 
 
 class PostPinCommentAPIView(APIView):
@@ -79,7 +139,6 @@ class PostPinCommentAPIView(APIView):
 
     def post(self, request, pk, format=None):
         comment_id = request.data.get('comment')
-        print(comment_id)
         try:
             post_candidate = Post.objects.get(pk=pk)
         except:
@@ -104,23 +163,39 @@ class CommentListAPIView(generics.ListAPIView):
     serializer_class = CommentListSerilaizer
     queryset = PostComment.objects.all()
 
+    
     def get_queryset(self):
         post = Post.objects.get(pk=self.kwargs.get('post'))
-        # sort_by = self.kwargs.get('sort_by')
+        sort_by = self.request.GET.get('sort_by', 'top_comments') 
 
-        # MOST_RELEVANT = 'most_relevant',
-        # NEWEST = 'newest',
-        # ALL_COMMENTS = 'all_comments',
+        pinned_comment_id = post.pinned_comment.id if hasattr(post, 'pinned_comment') and post.pinned_comment else None
 
-        pinned_comment_id = None
-        if post.pinned_comment:
-            pinned_comment_id = post.pinned_comment.id
+        queryset = super().get_queryset().filter(post=post.id, comment=None)
 
-        return super().get_queryset().filter(post=post.id, comment=None).annotate(
+        queryset = queryset.annotate(
+            like_count=Count('commentlike', filter=Q(commentlike__like=True)),
+            is_top_comment=Case(
+                When(is_liked_by_author=True, then=Value(1)),
+                default=Value(0),
+                output_field=IntegerField(),
+            ),
             custom_order=Case(
                 When(id=pinned_comment_id, then=Value(1)),
+                default=Value(0),
                 output_field=IntegerField(),
-            )).order_by('-custom_order')
+            ),
+        )
+
+        if sort_by == 'top_comments':
+            queryset = queryset.order_by(
+                '-custom_order', '-is_top_comment', '-like_count', '-created_at'
+            )
+        elif sort_by == 'newest_first':
+            queryset = queryset.order_by('-custom_order', '-created_at')
+        else:
+            queryset = queryset.order_by('-custom_order', '-created_at')
+
+        return queryset
         
     def get_serializer_context(self):
         context = super().get_serializer_context()
@@ -293,12 +368,13 @@ class AudienceListAPIView(generics.ListAPIView):
   
     def get_queryset(self):
         user_id = self.kwargs.get('user')
-        print(user_id)
         return Audience.objects.filter(user_id=user_id)
         
 
 class AudienceRetrieveDestroyAPIView(generics.RetrieveDestroyAPIView):
     permission_classes = [OwnerPermission]
+    queryset = Audience.objects.all()
+    serializer_class = AudienceCreateSerializer
     
     def delete(self, request, pk, *args, **kwargs):
         profile = UserProfile.objects.get(user=self.request.user.id)
@@ -321,3 +397,23 @@ class AudienceRetrieveDestroyAPIView(generics.RetrieveDestroyAPIView):
                 return Response(serialized_data.data, status=status.HTTP_200_OK)
             
         return Response(status=status.HTTP_200_OK)
+    
+    
+# FAVORITE POST
+
+class FavoritePostView(APIView):
+
+    def post(self, request):
+        serializer = FavoritePostSerializer(data=request.data)
+        if serializer.is_valid():
+            post_id = serializer.validated_data['post_id']
+            user_profile = request.user.userprofile  # Access UserProfile via the related name
+            post = Post.objects.get(id=post_id)
+
+            if post in user_profile.favorite_posts.all():
+                user_profile.favorite_posts.remove(post)  # Remove from favorites
+                return Response({"id": post_id, "favorite": False}, status=status.HTTP_200_OK)
+            else:
+                user_profile.favorite_posts.add(post)  # Add to favorites
+                return Response({"id": post_id, "favorite": True}, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

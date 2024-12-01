@@ -56,10 +56,10 @@ class Image(models.Model):
                 img.thumbnail(output_size_square, resample=ImageTool.LANCZOS)
             if aspect_ratio < 0.8:
                 img.thumbnail(output_size_vertical, resample=ImageTool.LANCZOS)
-            img.save(output_thumb, format='PNG')
+            img.save(output_thumb, format='WEBP')
 
             self.image_thumbnail = InMemoryUploadedFile(
-                output_thumb, 'ImageField', f"{img_name}_thumb.jpg", 'image/jpeg', sys.getsizeof(output_thumb), None)
+                output_thumb, 'ImageField', f"{img_name}_thumb.webp", 'image/webp', sys.getsizeof(output_thumb), None)
 
         super(Image, self).save()
 

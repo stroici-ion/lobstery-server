@@ -4,6 +4,7 @@ from . import views
 
 urlpatterns = [
     path('', views.PostListAPIView.as_view()),
+    path('favorite/', views.FavoritePostView.as_view(), name='favorite-post'),
     path('<int:pk>/details/', views.PostRetrieveAPIView.as_view()),
     path('create/', views.PostCreateAPIView.as_view()),
     path('<int:pk>/update/', views.PostUpdateAPIView.as_view()),

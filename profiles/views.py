@@ -5,9 +5,9 @@ from rest_framework.permissions import AllowAny
 from django.contrib.auth.models import User
 from posts.models import Audience
 from .models import UserProfile
-from .serializers import UserRegisterSerializer, UserPublicFullSerializer
+from .serializers import UserRegisterSerializer
 from .serializers import UserProfileSerializer, UserProfileFriendsSerializer
-from .serializers import UserProfileAudienceSerializer
+from .serializers import UserProfileAudienceSerializer, MyProfileSerializer, UserProfileDetailsSerializer
 
 class OwnerPermission(permissions.BasePermission):
     def has_object_permission(self, request, view, obj):
@@ -22,11 +22,17 @@ class UserCreateView(generics.CreateAPIView):
     permission_classes = [AllowAny]
 
 
-class UserRetrieveView(generics.RetrieveAPIView):
-    queryset = User.objects.all()
-    serializer_class = UserPublicFullSerializer
+class MyUserProfileRetrieveView(generics.RetrieveAPIView):
+    queryset = UserProfile.objects.all()
+    serializer_class = MyProfileSerializer
     permission_classes = [AllowAny]
+    lookup_field = 'user_id' 
 
+class UserProfileRetrieveView(generics.RetrieveAPIView):
+    queryset = UserProfile.objects.all()
+    serializer_class = UserProfileDetailsSerializer
+    permission_classes = [AllowAny]
+    lookup_field = 'user_id' 
 
 class UserProfileCreateView(generics.CreateAPIView):
     serializer_class = UserProfileSerializer
@@ -54,15 +60,14 @@ class AudienceUpdateRetrieveAPIView(generics.RetrieveUpdateDestroyAPIView):
     
     def put(self, request, *args, **kwargs):
         default_audience = request.data.get('default_audience')
-        print(request.data)
         if default_audience == 4:
             default_custom_audience = request.data.get('default_custom_audience')
             if not default_custom_audience:
                 audience_candidate = Audience.objects.filter(user=request.user.id).first()
-                print(audience_candidate)
                 if audience_candidate:
                     request.data['default_custom_audience'] = audience_candidate.id
                 else:
                     return Response({'message': 'No custom audience to set as default'}, status=status.HTTP_400_BAD_REQUEST)
                     
         return super().put(request, *args, **kwargs)
+    

@@ -18,64 +18,19 @@ class UserProfileInlineSerializer(serializers.ModelSerializer):
             'avatar_thumbnail',
             'cover',
         ]
-        
-    # def get_avatar(self, obj):
-    #     request = self.context.get('request')
-    #     if obj.avatar and request:
-    #         # Build the full URL using request.build_absolute_uri
-    #         return request.build_absolute_uri(obj.avatar)
-    #     return None
     
-    # def get_avatar_thumbnail(self, obj):
-    #     request = self.context.get('request')
-    #     if obj.avatar and request:
-    #         # Build the full URL using request.build_absolute_uri
-    #         return request.build_absolute_uri(obj.avatar_thumbnail)
-    #     return None
     
-
 class UserPublicSerializer(serializers.ModelSerializer):
     profile = UserProfileInlineSerializer(source='userprofile')
 
     class Meta:
         model = User
         fields = ['id',
-                  'username',
-                  'first_name',
-                  'last_name',
-                  'profile',
-                  ]
-
-# FULL USER INFO  (FRIENDS COUNT, LAST IMAGES AND OTHERS)
-
-
-class UserProfileFullInlineSerializer(serializers.ModelSerializer):
-    avatar = serializers.ImageField(read_only=True)
-    avatar_thumbnail = serializers.ImageField(read_only=True)
-    cover = serializers.ImageField(read_only=True)
-
-    class Meta:
-        model = UserProfile
-        fields = [
-            'avatar',
-            'avatar_thumbnail',
-            'cover',
-            'default_audience',
-            'default_custom_audience'
-        ]
-
-
-class UserPublicFullSerializer(serializers.ModelSerializer):
-    profile = UserProfileFullInlineSerializer(source='userprofile')
-
-    class Meta:
-        model = User
-        fields = ['id',
-                  'username',
-                  'first_name',
-                  'last_name',
-                  'profile',
-                  ]
+                'username',
+                'first_name',
+                'last_name',
+                'profile',
+                ]
 
 
 class UserRegisterSerializer(serializers.ModelSerializer):
@@ -100,8 +55,7 @@ class UserRegisterSerializer(serializers.ModelSerializer):
         return super(UserRegisterSerializer, self).create(validated_data)
 
 # PROFILE
-
-
+# FOR CREATE AND UPDATE
 class UserProfileSerializer(serializers.ModelSerializer):
     avatar = serializers.ImageField(required=False, max_length=None,
                                     allow_empty_file=True)
@@ -116,7 +70,9 @@ class UserProfileSerializer(serializers.ModelSerializer):
             'avatar_thumbnail',
             'cover',
         ]
-
+     
+        
+# FOR FRIENDS
 class UserProfileFriendsInlineSerializer(serializers.ModelSerializer):
     user = UserPublicSerializer(
         many=False, read_only=True)
@@ -128,6 +84,7 @@ class UserProfileFriendsInlineSerializer(serializers.ModelSerializer):
         ]
 
 
+# FRIENDS
 class UserProfileFriendsSerializer(serializers.ModelSerializer):
     friends = UserProfileFriendsInlineSerializer(many=True, read_only=True)
 
@@ -137,7 +94,9 @@ class UserProfileFriendsSerializer(serializers.ModelSerializer):
             'friends',
         ]
 
+
     
+# FOR DEFAULT AUDIENCE FETCHING
 class UserProfileAudienceSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserProfile
@@ -145,3 +104,41 @@ class UserProfileAudienceSerializer(serializers.ModelSerializer):
             'default_audience',
             'default_custom_audience',
         ]
+
+
+# FOR MY PROFILE
+class MyProfileSerializer(serializers.ModelSerializer):
+    user = UserPublicSerializer()
+    friends = UserProfileFriendsInlineSerializer(many=True, read_only=True)
+    friends_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = UserProfile
+        fields = [
+            'user',
+            'default_audience',
+            'default_custom_audience',
+            'friends',
+            'friends_count',
+        ]
+
+    def get_friends_count(self, obj):
+        return obj.friends.count()
+   
+class UserProfileDetailsSerializer(serializers.ModelSerializer):
+    user = UserPublicSerializer()
+    friends = UserProfileFriendsInlineSerializer(many=True, read_only=True)
+    friends_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = UserProfile
+        fields = [
+            'user',
+            'friends',
+            'friends_count',
+        ]
+
+    def get_friends_count(self, obj):
+        return obj.friends.count()
+    
+    
