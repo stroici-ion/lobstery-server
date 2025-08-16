@@ -7,7 +7,12 @@ from posts.models import Audience
 from .models import UserProfile
 from .serializers import UserRegisterSerializer
 from .serializers import UserProfileSerializer, UserProfileFriendsSerializer
-from .serializers import UserProfileAudienceSerializer, MyProfileSerializer, UserProfileDetailsSerializer
+from .serializers import (
+    UserProfileAudienceSerializer,
+    MyProfileSerializer,
+    UserProfileDetailsSerializer,
+)
+
 
 class OwnerPermission(permissions.BasePermission):
     def has_object_permission(self, request, view, obj):
@@ -22,17 +27,20 @@ class UserCreateView(generics.CreateAPIView):
     permission_classes = [AllowAny]
 
 
-class MyUserProfileRetrieveView(generics.RetrieveAPIView):
-    queryset = UserProfile.objects.all()
+class MyProfileRetrieveView(generics.RetrieveAPIView):
     serializer_class = MyProfileSerializer
-    permission_classes = [AllowAny]
-    lookup_field = 'user_id' 
+    permission_classes = [OwnerPermission]
+
+    def get_object(self):
+        return self.request.user.userprofile
+
 
 class UserProfileRetrieveView(generics.RetrieveAPIView):
     queryset = UserProfile.objects.all()
     serializer_class = UserProfileDetailsSerializer
     permission_classes = [AllowAny]
-    lookup_field = 'user_id' 
+    lookup_field = "user_id"
+
 
 class UserProfileCreateView(generics.CreateAPIView):
     serializer_class = UserProfileSerializer
@@ -48,8 +56,8 @@ class UserProfileUpdateView(generics.UpdateAPIView):
 class FriendsListView(generics.RetrieveAPIView):
     def get(self, request, *args, **kwargs):
         profile = UserProfile.objects.get(user=request.user)
-        serializer = UserProfileFriendsSerializer(profile, context={'request': request})
-        return Response(serializer.data)    
+        serializer = UserProfileFriendsSerializer(profile, context={"request": request})
+        return Response(serializer.data)
 
 
 class AudienceUpdateRetrieveAPIView(generics.RetrieveUpdateDestroyAPIView):
@@ -57,17 +65,21 @@ class AudienceUpdateRetrieveAPIView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = UserProfileAudienceSerializer
     queryset = UserProfile.objects.all()
     lookup_field = "user"
-    
+
     def put(self, request, *args, **kwargs):
-        default_audience = request.data.get('default_audience')
+        default_audience = request.data.get("default_audience")
         if default_audience == 4:
-            default_custom_audience = request.data.get('default_custom_audience')
+            default_custom_audience = request.data.get("default_custom_audience")
             if not default_custom_audience:
-                audience_candidate = Audience.objects.filter(user=request.user.id).first()
+                audience_candidate = Audience.objects.filter(
+                    user=request.user.id
+                ).first()
                 if audience_candidate:
-                    request.data['default_custom_audience'] = audience_candidate.id
+                    request.data["default_custom_audience"] = audience_candidate.id
                 else:
-                    return Response({'message': 'No custom audience to set as default'}, status=status.HTTP_400_BAD_REQUEST)
-                    
+                    return Response(
+                        {"message": "No custom audience to set as default"},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+
         return super().put(request, *args, **kwargs)
-    
